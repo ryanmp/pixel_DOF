@@ -1,8 +1,16 @@
 from PIL import Image
-import random
+import random, datetime
 
 img = Image.open('images/original.jpg')
-pixels = img.load() # create the pixel map
+img_pixels = img.load()
+
+dof_map = Image.open('images/gradient2.jpg').load()
+ 
+class V: # vector
+    def __init__(self, x, y):
+        self.x = x  
+        self.y = y      
+
 
 def get_avg_color(x, y, size):
 	pixel_sum = [0,0,0]
@@ -15,7 +23,7 @@ def get_avg_color(x, y, size):
 	for x in xrange(min_x,max_x):
 		for y in xrange(min_y,max_y):
 			for c in [0,1,2]:
-				pixel_sum[c] += pixels[x,y][c]
+				pixel_sum[c] += img_pixels[x,y][c]
 
 	total_pixels = (max_x - min_x) * (max_y - min_y)
 	average_pixel = [i/total_pixels for i in pixel_sum]
@@ -33,19 +41,41 @@ def set_color(c, x, y, size):
 
 	for x in xrange(min_x,max_x):
 		for y in xrange(min_y,max_y):
-			pixels[x,y] = c
+			img_pixels[x,y] = c
 
 
-num_passes = 40
-for i in xrange(num_passes):
+def random_sampling(num_samples):
+	for i in xrange(num_samples):
 
-	this_size = random.randrange(10,50)*2
-	this_x = random.randrange(0+this_size/2,img.size[0]-this_size/2)
-	this_y = random.randrange(0+this_size/2,img.size[1]-this_size/2)
+		sample_loc = V(random.randrange(0,img.size[0]),random.randrange(0,img.size[1]))
 
-	p = get_avg_color(this_x,this_y,this_size)
-	set_color(p,this_x,this_y,this_size)
+		max_size = 100
+		this_size = (((dof_map[sample_loc.x,sample_loc.y])/255.0) * max_size) + 1
+		this_size = int(this_size)
+		
+		p = get_avg_color(sample_loc.x,sample_loc.y,this_size)
+		set_color(p,sample_loc.x,sample_loc.y,this_size)
+
+def grid_sampling(res):
+	for x in xrange(0,img.size[0],res):
+		for y in xrange(0,img.size[1],res):
+
+			sample_loc = V(x,y)
+
+			max_size = 100
+			this_size = (((dof_map[sample_loc.x,sample_loc.y])/255.0) * max_size) + 1
+			this_size = int(this_size)
+			
+			p = get_avg_color(sample_loc.x,sample_loc.y,this_size)
+			set_color(p,sample_loc.x,sample_loc.y,this_size)
+
+
+
+#random_sampling(5000) # first method of creating image
+#grid_sampling(40)
 
 img.show()
-#img.save('test.png')
+st = datetime.datetime.now().strftime('%Y%m%d_%H_%M_%S')
+img.save('test_out_'+st+'.png')
+
 
